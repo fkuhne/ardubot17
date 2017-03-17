@@ -9,7 +9,7 @@
 
 /* NRF24L01 comm based on https://arduino-info.wikispaces.com/Nrf24L01-2.4GHz-ExampleSketches#js1 
  * and RF24 lib (https://github.com/TMRh20/RF24).
- * Connections: (http://arduino-info.wikispaces.com/Nrf24L01-2.4GHz-HowTo)
+ * NRF24 pinout to Arduino:
  *  1: GND
  *  2: VCC 3.3V !!! NOT 5V
  *  3: CE to Arduino pin 7
@@ -30,9 +30,9 @@
  */
 
 /* Pins: */
-const int joystickX_pin = A0; //14
-const int joystickY_pin = A1; //15
-const int joystickSwitch_pin = 16; //A2
+const int joystickX_pin = A1; //14
+const int joystickY_pin = A0; //15
+const int joystickSwitch_pin = 4;
 
 /*
  * Radio:
@@ -41,7 +41,7 @@ const int joystickSwitch_pin = 16; //A2
 const int ce_pin = 7;
 const int csn_pin = 8;
 const int radioChannel = 108;
-byte addresses[][6] = {"1Node", "2Node"}; // These will be the names of the "Pipes"
+byte addresses[][6] = {"Node1"}; // These will be the names of the "Pipes"
 typedef struct {
   int x;
   int y;
@@ -61,8 +61,10 @@ void setup()
   /* Initialize hardware. */
   pinMode(joystickX_pin, INPUT);
   pinMode(joystickY_pin, INPUT);
-  pinMode(joystickSwitch_pin, INPUT_PULLUP);
-  
+  pinMode(joystickSwitch_pin, INPUT);
+
+  pinMode(10, OUTPUT);
+
   /* Initialize radio. */
   radio.begin(); /* Initialize the nRF24L01 Radio. */
   radio.setChannel(radioChannel); /* 2.508 Ghz - Above most Wifi channels. */
@@ -71,20 +73,40 @@ void setup()
   /* Set the Power Amplifier Level low to prevent power supply related issues. */
   radio.setPALevel(RF24_PA_LOW); /* RF24_PA_MAX */
 
-  /* Open reading pipe. */
+  /* Open writing pipe. */
   radio.openWritingPipe(addresses[0]);
 
   /* Start the radio listening for data. */
-  radio.startListening();
+  //radio.startListening();
+
+  Serial.begin(115200);
+
+  radio.printDetails();
 }
 
 void loop()
 {
   joystick.x = analogRead(joystickX_pin);
-  joystick.y = analogRead(joystickY_pin);
-  joystick.sw  = !digitalRead(joystickSwitch_pin);  // Invert the pulldown switch
+  /* Invert Y to compensate for an error in hardware. :) */
+  joystick.y = map(analogRead(joystickY_pin), 1023, 0, 0, 1023);
+  joystick.sw  = digitalRead(joystickSwitch_pin);
   
   radio.write(&joystick, sizeof(joystick));
-  
-  delay(250);
+
+  /* This is for debug only. */
+  /*Serial.print(joystick.x);
+  Serial.print(" ");
+  Serial.print(joystick.y);
+  Serial.print(" ");
+  Serial.println(joystick.sw);
+
+  bool tx, fail, rx;
+  radio.whatHappened(tx,fail,rx);
+  Serial.print(tx);
+  Serial.print(" ");
+  Serial.print(fail);
+  Serial.print(" ");
+  Serial.println(rx);*/
+
+  delay(100);
 }
