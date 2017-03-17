@@ -7,23 +7,11 @@
  * THIS IS FREE SOFTWARE. CHOOSE THE LICENSE THAT BEST FITS FOR YOU.
  */
 
-/* NRF24L01 comm based on https://arduino-info.wikispaces.com/Nrf24L01-2.4GHz-ExampleSketches#js1 
- * and RF24 lib (https://github.com/TMRh20/RF24).
- * NRF24 pinout to Arduino:
- *  1: GND
- *  2: VCC 3.3V !!! NOT 5V
- *  3: CE to Arduino pin 7
- *  4: CSN to Arduino pin 8
- *  5: SCK to Arduino pin 13
- *  6: MOSI to Arduino pin 11
- *  7: MISO to Arduino pin 12
- *  8: UNUSED
+/* A good source of information about bluetooth modules with Arduino is here:
+ * http://www.martyncurrey.com/connecting-2-arduinos-by-bluetooth-using-a-hc-05-and-a-hc-06-pair-bind-and-link/
  */
 
-#include <nRF24L01.h>
-#include <printf.h>
-#include <RF24.h>
-#include <RF24_config.h>
+#include <SoftwareSerial.h>
 
 /*
  * Global constant definitions:
@@ -33,28 +21,13 @@
 const int joystickX_pin = A1; //14
 const int joystickY_pin = A0; //15
 const int joystickSwitch_pin = 4;
+const int btSerialRX_pin = 2;
+const int btSerialTX_pin = 3;
 
-/*
- * Radio:
- */
+/* Connect the HC-05 TX to Arduino pin 2 RX and HC-05 RX to Arduino pin 3 TX
+ * through a voltage divider: 5V---( 1k )--[RX]--(2k)---GND */
+SoftwareSerial BTserial(btSerialRX_pin, btSerialTX_pin);
 
-const int ce_pin = 7;
-const int csn_pin = 8;
-const int radioChannel = 108;
-byte addresses[][6] = {"Node1"}; // These will be the names of the "Pipes"
-typedef struct {
-  int x;
-  int y;
-  bool sw;
-} joystickData;
-
-joystickData joystick{0, 0, 0};
-
-/*
- * Global variables:
- */
-
-RF24 radio(ce_pin, csn_pin);
 
 void setup()
 {
@@ -63,50 +36,29 @@ void setup()
   pinMode(joystickY_pin, INPUT);
   pinMode(joystickSwitch_pin, INPUT);
 
-  pinMode(10, OUTPUT);
-
-  /* Initialize radio. */
-  radio.begin(); /* Initialize the nRF24L01 Radio. */
-  radio.setChannel(radioChannel); /* 2.508 Ghz - Above most Wifi channels. */
-  radio.setDataRate(RF24_250KBPS); /* Fast enough, better range. */
-
-  /* Set the Power Amplifier Level low to prevent power supply related issues. */
-  radio.setPALevel(RF24_PA_LOW); /* RF24_PA_MAX */
-
-  /* Open writing pipe. */
-  radio.openWritingPipe(addresses[0]);
-
-  /* Start the radio listening for data. */
-  //radio.startListening();
-
-  Serial.begin(115200);
-
-  radio.printDetails();
+  Serial.begin(9600);
+  BTserial.begin(9600);
 }
 
 void loop()
 {
-  joystick.x = analogRead(joystickX_pin);
+  int digitalX = analogRead(joystickX_pin);
   /* Invert Y to compensate for an error in hardware. :) */
-  joystick.y = map(analogRead(joystickY_pin), 1023, 0, 0, 1023);
-  joystick.sw  = digitalRead(joystickSwitch_pin);
-  
-  radio.write(&joystick, sizeof(joystick));
+  digitalY = map(analogRead(joystickY_pin), 1023, 0, 0, 1023);
+  switch = digitalRead(joystickSwitch_pin);
+
+  BTSerial.print(digitalX);
+  BTserial.print(",");
+  BTserial.print(digitalY);
+  BTserial.print(",");
+  BTserial.println(switch);
 
   /* This is for debug only. */
-  /*Serial.print(joystick.x);
-  Serial.print(" ");
-  Serial.print(joystick.y);
-  Serial.print(" ");
-  Serial.println(joystick.sw);
-
-  bool tx, fail, rx;
-  radio.whatHappened(tx,fail,rx);
-  Serial.print(tx);
-  Serial.print(" ");
-  Serial.print(fail);
-  Serial.print(" ");
-  Serial.println(rx);*/
+  Serial.print(digitalX);
+  Serial.print(",");
+  Serial.print(digitalY);
+  Serial.print(",");
+  Serial.println(switch);
 
   delay(100);
 }
