@@ -12,7 +12,7 @@ DCMotor::DCMotor(const int enable, const int inA, const int inB)
   enable_pin = enable;
   inA_pin = inA;
   inB_pin = inB;
-  
+
   _motorState = STOP;
   _linearVelocity = _lastlinearVelocity = V0;
 }
@@ -24,7 +24,7 @@ DCMotor::DCMotor(const int enable, const int inA, const int inB)
     enable_pin = other.enable_pin;
 	inA_pin = other.inA_pin;
 	inB_pin = other.inB_pin;
-	
+
 	_motorDirection = other._motorDirection;
 	_motorState = other._motorState;
 	_linearVelocity = other._linearVelocity;
@@ -43,7 +43,7 @@ L298N::L298N(DCMotor& motor)
 
   pinMode(motor.inB_pin, OUTPUT);
   digitalWrite(motor.inB_pin, LOW);
-  
+
   _motor1 = motor;
   isMotor2Defined = false;
 };
@@ -59,8 +59,9 @@ L298N::L298N(const DCMotor& motor1, const DCMotor& motor2)
   pinMode(motor1.inB_pin, OUTPUT);
   digitalWrite(motor1.inB_pin, LOW);
 
+  /* Copy to internal object. */
   _motor1 = motor1;
-  
+
   pinMode(motor2.enable_pin, OUTPUT);
   digitalWrite(motor2.enable_pin, LOW);
 
@@ -70,6 +71,7 @@ L298N::L298N(const DCMotor& motor1, const DCMotor& motor2)
   pinMode(motor2.inB_pin, OUTPUT);
   digitalWrite(motor2.inB_pin, LOW);
 
+  /* Copy to internal object. */
   _motor2 = motor2;
   isMotor2Defined = true;
 }
@@ -78,7 +80,7 @@ int L298N::setState(const DCMotor& motor, const motorState state)
 {
   if(motor.enable_pin == 0)
 	  return -1;
-  
+
   if(state == STOP)
     digitalWrite(motor.enable_pin, LOW);
 
@@ -95,7 +97,7 @@ int L298N::setState(const motorState state)
 {
   int ret = setState(_motor1, state);
   if(!ret && isMotor2Defined)
-    ret = setState(_motor1, state);
+    ret = setState(_motor2, state);
 
   return ret;
 }
@@ -104,7 +106,7 @@ int L298N::setDirection(const DCMotor& motor, motorDirection direction)
 {
   if(motor.inA_pin == 0 || motor.inB_pin == 0)
 	  return -1;
-  
+
   if(direction == FW)
   {
     digitalWrite(motor.inA_pin, LOW);
@@ -135,10 +137,10 @@ int L298N::setSpeed(const DCMotor& motor, const linearVelocity v, const angularV
 {
 	if(motor.enable_pin == 0)
 		return -1;
-	
+
 	if(v == V0)
 		setState(motor, STOP);
-	
+
 	int dutyCycle = map(v, V0, V1, 0, 255);
 	analogWrite(motor.enable_pin, dutyCycle);
 
