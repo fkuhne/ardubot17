@@ -14,26 +14,9 @@ DCMotor::DCMotor(const int enable, const int inA, const int inB)
   inB_pin = inB;
 
   _motorState = STOP;
-  _linearVelocity = _lastlinearVelocity = V0;
 }
 
-/*DCMotor::DCMotor& operator= (const DCMotor& other)
-{
-  if (this != &other) // protect against invalid self-assignment
-  {
-    enable_pin = other.enable_pin;
-	inA_pin = other.inA_pin;
-	inB_pin = other.inB_pin;
-
-	_motorDirection = other._motorDirection;
-	_motorState = other._motorState;
-	_linearVelocity = other._linearVelocity;
-	_lastlinearVelocity = other._lastlinearVelocity;
-  }
-  return *this;
-}*/
-
-L298N::L298N(DCMotor& motor)
+L298N::L298N(const DCMotor& motor)
 {
   pinMode(motor.enable_pin, OUTPUT);
   digitalWrite(motor.enable_pin, LOW);
@@ -76,16 +59,22 @@ L298N::L298N(const DCMotor& motor1, const DCMotor& motor2)
   isMotor2Defined = true;
 }
 
-int L298N::setState(const DCMotor& motor, const motorState state)
+int L298N::setState(DCMotor& motor, const motorState state)
 {
   if(motor.enable_pin == 0)
 	  return -1;
 
   if(state == STOP)
+  {
     digitalWrite(motor.enable_pin, LOW);
+    motor._motorState = state;
+  }
 
   else if(state == RUN)
+  {
     digitalWrite(motor.enable_pin, HIGH);
+    motor._motorState = state;
+  }
 
   else
     return -1;
@@ -102,7 +91,39 @@ int L298N::setState(const motorState state)
   return ret;
 }
 
-int L298N::setDirection(const DCMotor& motor, motorDirection direction)
+int L298N::setDutyCycle(DCMotor& motor, const unsigned int dutyCycle)
+{
+  /* Test for invalid parameters. */
+  if(motor.enable_pin == 0 || dutyCycle > 255)
+    return -1;
+
+  if(dutyCycle == 0)
+    return setState(motor, STOP);
+
+  analogWrite(motor.enable_pin, dutyCycle);
+
+  return 0;
+}
+
+int L298N::setDutyCycle(const unsigned int dutyCycleLeft, const unsigned int dutyCycleRight)
+{
+  int ret = setDutyCycle(_motor1, dutyCycleLeft);
+  if(!ret && isMotor2Defined)
+    ret = setDutyCycle(_motor2, dutyCycleRight);
+
+  return ret;
+}
+
+int L298N::setDutyCycle(const unsigned int dutyCycle)
+{
+  int ret = setDutyCycle(_motor1, dutyCycle);
+  if(!ret && isMotor2Defined)
+    ret = setDutyCycle(_motor2, dutyCycle);
+
+  return ret;
+}
+
+int L298N::setDirection(DCMotor& motor, const motorDirection direction)
 {
   if(motor.inA_pin == 0 || motor.inB_pin == 0)
 	  return -1;
@@ -111,11 +132,13 @@ int L298N::setDirection(const DCMotor& motor, motorDirection direction)
   {
     digitalWrite(motor.inA_pin, LOW);
     digitalWrite(motor.inB_pin, HIGH);
+    motor._motorDirection = direction;
   }
   else if(direction == BW)
   {
     digitalWrite(motor.inA_pin, HIGH);
     digitalWrite(motor.inB_pin, LOW);
+    motor._motorDirection = direction;
   }
   else
     return -1;
@@ -130,28 +153,4 @@ int L298N::setDirection(const motorDirection direction)
     ret = setDirection(_motor2, direction);
 
   return ret;
-}
-
-/* Maps the linear velocity back to a PWM duty cycle. */
-int L298N::setSpeed(const DCMotor& motor, const linearVelocity v, const angularVelocity w)
-{
-	if(motor.enable_pin == 0)
-		return -1;
-
-	if(v == V0)
-		setState(motor, STOP);
-
-	int dutyCycle = map(v, V0, V1, 0, 255);
-	analogWrite(motor.enable_pin, dutyCycle);
-
-	return 0;
-}
-
-int L298N::setSpeed(const linearVelocity v, const angularVelocity w)
-{
-	int ret = setSpeed(_motor1, v, w);
-	if(ret == 0 && isMotor2Defined == true)
-		ret = setSpeed(_motor2, v, w);
-
-	return ret;
 }
