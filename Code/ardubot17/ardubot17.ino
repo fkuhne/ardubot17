@@ -9,6 +9,9 @@
 
 /* A good source of information about bluetooth modules with Arduino is here:
  * http://www.martyncurrey.com/connecting-2-arduinos-by-bluetooth-using-a-hc-05-and-a-hc-06-pair-bind-and-link/
+ * 
+ * Details about AT commands and configuration of HC-06 module here:
+ * http://www.instructables.com/id/AT-command-mode-of-HC-05-Bluetooth-module/step5/AT-commands/
  */
 
 #include <SoftwareSerial.h>
@@ -143,16 +146,16 @@ void applyControlSignals(int digitalX, int digitalY)
     vPercentage = map(digitalY, deadbandLowerLimit, 0.0, 0.0, -100.0);
   }
 
-  Serial.print("vPercentage = "); Serial.print(vPercentage);
-  Serial.print(", wPercentage = "); Serial.println(wPercentage);
+  //Serial.print("vPercentage = "); Serial.print(vPercentage);
+  //Serial.print(", wPercentage = "); Serial.println(wPercentage);
 
   /* Distribute the signals for left and right wheels, acoording to the
    * speeds. */
   int leftPercentage = vPercentage + wPercentage;
   int rightPercentage = vPercentage - wPercentage;
 
-  Serial.print("leftPercentage = "); Serial.print(leftPercentage);
-  Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
+  //Serial.print("leftPercentage = "); Serial.print(leftPercentage);
+  //Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
 
   /* Computes a scale factor. If any result exceeds 100% then adjust the scale
    * so that the result = 100% and use same scale value for other motor. */
@@ -162,9 +165,9 @@ void applyControlSignals(int digitalX, int digitalY)
   leftPercentage *= scale;
   rightPercentage *= scale;
 
-  Serial.print(", scale = "); Serial.print(scale);
-  Serial.print(", leftPercentage = "); Serial.print(leftPercentage);
-  Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
+  //Serial.print(", scale = "); Serial.print(scale);
+  //Serial.print(", leftPercentage = "); Serial.print(leftPercentage);
+  //Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
 
   /* Duty Cycle for the motors. */
   int PWMLeft = map(abs(leftPercentage), 0, 100, 0, 255);
@@ -180,8 +183,8 @@ void applyControlSignals(int digitalX, int digitalY)
   l298n.setDirection(motor2, (rightPercentage > 0) ? FW : BW);
   l298n.setDutyCycle(PWMLeft, PWMRight);
 
-  Serial.println("OK.");
-  delay(10);
+  //Serial.println("OK.");
+  //delay(10);
 }
 
 
@@ -201,14 +204,16 @@ void loop()
   int digitalX = -1;
   int digitalY = -1;
   int button = -1;
+
+  unsigned long timeNow = millis();
   
   /* Check for valid data. */
   if(waitCompleteSentence(&digitalX, &digitalY, &button) == 0)
   {
     /* Debug: */
-    Serial.print("digitalX = "); Serial.print(digitalX);
-    Serial.print(", digitalY = "); Serial.print(digitalY);
-    Serial.print(", button = "); Serial.println(button);
+    //Serial.print("digitalX = "); Serial.print(digitalX);
+    //Serial.print(", digitalY = "); Serial.print(digitalY);
+    //Serial.print(", button = "); Serial.println(button);
 
     applyControlSignals(digitalX, digitalY);
     applyButtonAction(button);
@@ -220,7 +225,6 @@ void loop()
   {
     /* Compute the time interval between the last received frame
      *  and now. If higher than 1 second, turn of the motors. */
-    unsigned long timeNow = millis();
     if(timeNow - timeReceived > 1000)
     {
       Serial.println("Communication timeout. Turning off motors.");
