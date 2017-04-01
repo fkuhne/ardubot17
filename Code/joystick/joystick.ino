@@ -20,8 +20,8 @@
 const int serialFrameSize = 13;
 
 /* Pins: */
-const int joystickX_pin = A1; //14
-const int joystickY_pin = A0; //15
+const int joystickX_pin = A1;
+const int joystickY_pin = A0;
 const int joystickButton_pin = 4;
 const int btSerialRX_pin = 2;
 const int btSerialTX_pin = 3;
@@ -30,7 +30,6 @@ const int btSerialTX_pin = 3;
  * through a voltage divider: 5V---( 1k )--[RX]--(2k)---GND */
 SoftwareSerial BTSerial(btSerialRX_pin, btSerialTX_pin);
 
-
 void setup()
 {
   /* Initialize hardware. */
@@ -38,8 +37,9 @@ void setup()
   pinMode(joystickY_pin, INPUT);
   pinMode(joystickButton_pin, INPUT);
 
-  Serial.begin(9600);
-  BTSerial.begin(9600);
+  /* Open both serial ports. */
+  Serial.begin(9600); /* This is for debug only. */
+  BTSerial.begin(9600); /* Bluetooth communication. */
 }
 
 void loop()
@@ -52,15 +52,14 @@ void loop()
   int button = digitalRead(joystickButton_pin) + 1;
 
   char sendBuffer[serialFrameSize] = "";
+  
   /* Format the numbers with four digits, so we can fix the frame size that
    *  will be transmitted. */
-  snprintf(sendBuffer, serialFrameSize, "%04d,%04d,%1d\n", 
-           digitalX, digitalY, button);
+  snprintf(sendBuffer, serialFrameSize, "%04d,%04d,%1d\n", digitalX, digitalY, button);
 
-  BTSerial.print(sendBuffer);
+  BTSerial.print(sendBuffer); /* Send through bluetooth. */
 
-  /* This is for debug only. */
-  Serial.print(sendBuffer);
+  Serial.print(sendBuffer); /* This is for debug only. */
 
   delay(100);
 }

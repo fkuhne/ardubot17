@@ -21,10 +21,9 @@
  * Global constant definitions:
  */
 
-const int serialFrameSize = 13;
-unsigned long timeReceived = 0;
-
-const float deadBand = 20.0;
+const int serialFrameSize = 13; /* Fixed size for a frame received through serial. */
+unsigned long timeReceived = 0; /* records when the last vlaid frame has been received. */
+const float deadBand = 20.0; /* Deadband region which keeps the robot stopped. */
 
 /* Pins used for motor 1: */
 const int enable1_pin = 9;
@@ -36,7 +35,8 @@ const int enable2_pin = 10;
 const int inA2_pin = 5;
 const int inB2_pin = 4;
 
-const int btSerialRX_pin = 7;
+/* Software serial pins definition for bluetooth. */
+const int btSerialRX_pin = 7; 
 const int btSerialTX_pin = 8;
 
 const int buzzer_pin = 6;
@@ -127,47 +127,30 @@ void applyControlSignals(int digitalX, int digitalY)
    * translate it to a percentage level, that is, translate from 1023~0 to
    * -100~100. */
   if(digitalX >= deadbandUpperLimit)
-  {
     wPercentage = map(digitalX, deadbandUpperLimit, 1023.0, 0.0, 100.0);
-  }
-  else if(digitalX <= deadbandLowerLimit)
-  {
-    wPercentage = map(digitalX, deadbandLowerLimit, 0.0, 0.0, -100.0);
-  }
 
+  else if(digitalX <= deadbandLowerLimit)
+    wPercentage = map(digitalX, deadbandLowerLimit, 0.0, 0.0, -100.0);
+  
   /* Let us now compute the linear velocity. The same scheme as above will
    * be applied, that is, translate from 0~1023 to -100~100. */
   if(digitalY >= deadbandUpperLimit)
-  {
     vPercentage = map(digitalY, deadbandUpperLimit, 1023, 0, 100);
-  }
+ 
   else if(digitalY <= deadbandLowerLimit)
-  {
     vPercentage = map(digitalY, deadbandLowerLimit, 0.0, 0.0, -100.0);
-  }
-
-  //Serial.print("vPercentage = "); Serial.print(vPercentage);
-  //Serial.print(", wPercentage = "); Serial.println(wPercentage);
-
+ 
   /* Distribute the signals for left and right wheels, acoording to the
    * speeds. */
   int leftPercentage = vPercentage + wPercentage;
   int rightPercentage = vPercentage - wPercentage;
 
-  //Serial.print("leftPercentage = "); Serial.print(leftPercentage);
-  //Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
-
   /* Computes a scale factor. If any result exceeds 100% then adjust the scale
    * so that the result = 100% and use same scale value for other motor. */
   float maxPercentage = max(abs(leftPercentage), abs(rightPercentage));
   float scale = min(1,(100.0/maxPercentage));
-
   leftPercentage *= scale;
   rightPercentage *= scale;
-
-  //Serial.print(", scale = "); Serial.print(scale);
-  //Serial.print(", leftPercentage = "); Serial.print(leftPercentage);
-  //Serial.print(", rightPercentage = "); Serial.println(rightPercentage);
 
   /* Duty Cycle for the motors. */
   int PWMLeft = map(abs(leftPercentage), 0, 100, 0, 255);
@@ -182,9 +165,6 @@ void applyControlSignals(int digitalX, int digitalY)
   l298n.setDirection(motor1, (leftPercentage > 0) ? FW : BW);
   l298n.setDirection(motor2, (rightPercentage > 0) ? FW : BW);
   l298n.setDutyCycle(PWMLeft, PWMRight);
-
-  //Serial.println("OK.");
-  //delay(10);
 }
 
 
@@ -210,12 +190,9 @@ void loop()
   /* Check for valid data. */
   if(waitCompleteSentence(&digitalX, &digitalY, &button) == 0)
   {
-    /* Debug: */
-    //Serial.print("digitalX = "); Serial.print(digitalX);
-    //Serial.print(", digitalY = "); Serial.print(digitalY);
-    //Serial.print(", button = "); Serial.println(button);
-
+    /* Generate PWM values from joystick values. */
     applyControlSignals(digitalX, digitalY);
+    /* Do something with the button. */
     applyButtonAction(button);
 
     /* Register when was the last valid frame. */
